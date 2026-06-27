@@ -164,7 +164,18 @@
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.15</version>
 
+				<configuration>
+					<excludes>
+						<exclude>com/library/user_service/UserServiceApplication.class</exclude>
+						<exclude>com/library/user_service/dto/**</exclude>
+						<exclude>com/library/user_service/model/**</exclude>
+						<exclude>com/library/user_service/repository/**</exclude>
+						<exclude>com/library/user_service/exception/ErrorResponse.class</exclude>
+					</excludes>
+				</configuration>
+
 				<executions>
+
 					<execution>
 						<id>prepare-agent</id>
 
@@ -180,23 +191,43 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+
+					<execution>
+						<id>check-coverage</id>
+						<phase>verify</phase>
+
+						<goals>
+							<goal>check</goal>
+						</goals>
 
 						<configuration>
-							<excludes>
-								<exclude>com/library/user_service/UserServiceApplication.class</exclude>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
 
-								<exclude>com/library/user_service/dto/**</exclude>
+									<limits>
 
-								<exclude>com/library/user_service/model/**</exclude>
+										<limit>
+											<counter>INSTRUCTION</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.80</minimum>
+										</limit>
 
-								<exclude>com/library/user_service/repository/**</exclude>
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.80</minimum>
+										</limit>
 
-								<exclude>com/library/user_service/exception/ErrorResponse.class</exclude>
-							</excludes>
+									</limits>
+								</rule>
+							</rules>
 						</configuration>
 					</execution>
+
 				</executions>
-			</plugin>
+			</plugin>			
 		</plugins>
 	</build>
 
