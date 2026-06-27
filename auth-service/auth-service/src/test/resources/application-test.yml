@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: auth-service-test
+
+  datasource:
+    url: "jdbc:h2:mem:auth_test_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+    show-sql: false
+
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+jwt:
+  secret: "AuthServiceTestSecretKey2026Minimum32Characters"
+  expiration: 86400000
+
+internal:
+  api:
+    key: "AuthServiceInternalTestKey2026"
+
+app:
+  bootstrap:
+    admin:
+      enabled: false
+      name: ""
+      email: ""
+      password: ""
+
+springdoc:
+  api-docs:
+    enabled: false
+
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.library.auth_service: INFO
