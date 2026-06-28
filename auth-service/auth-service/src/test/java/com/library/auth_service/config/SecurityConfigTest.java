@@ -7,7 +7,7 @@ import com.library.auth_service.security.JwtAuthenticationEntryPoint;
 import com.library.auth_service.security.JwtAuthenticationFilter;
 import com.library.auth_service.security.JwtService;
 import com.library.auth_service.service.AuthService;
-
+import com.library.auth_service.security.JwtAccessDeniedHandler;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 
@@ -49,7 +49,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({
         SecurityConfig.class,
         JwtAuthenticationFilter.class,
-        JwtAuthenticationEntryPoint.class
+        JwtAuthenticationEntryPoint.class,
+        JwtAccessDeniedHandler.class
 })
 class SecurityConfigTest {
 
