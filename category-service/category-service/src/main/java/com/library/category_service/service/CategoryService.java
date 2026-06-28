@@ -1,18 +1,28 @@
 package com.library.category_service.service;
 
-import com.library.category_service.entity.Category;
+import com.library.category_service.dto.CategoryRequestDTO;
+import com.library.category_service.dto.CategoryResponseDTO;
 
 import java.util.List;
 
 public interface CategoryService {
 
-    Category saveCategory(Category category);
+    CategoryResponseDTO saveCategory(
+            CategoryRequestDTO request
+    );
 
-    List<Category> getAllCategories();
+    List<CategoryResponseDTO> getAllCategories();
 
-    Category getCategoryById(Long id);
+    CategoryResponseDTO getCategoryById(
+            Long id
+    );
 
-    Category updateCategory(Long id, Category category);
+    CategoryResponseDTO updateCategory(
+            Long id,
+            CategoryRequestDTO request
+    );
 
-    void deleteCategory(Long id);
+    void deleteCategory(
+            Long id
+    );
 }
