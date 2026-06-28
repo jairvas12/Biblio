@@ -1,4 +1,4 @@
-package com.library.book_service;
+package com.library.book_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Category {
+public class CategoryResponseDTO {
 
     private Long id;
 

@@ -1,18 +1,28 @@
 package com.library.book_service.service;
 
-import com.library.book_service.entity.Book;
+import com.library.book_service.dto.BookRequestDTO;
+import com.library.book_service.dto.BookResponseDTO;
 
 import java.util.List;
 
 public interface BookService {
 
-    Book saveBook(Book book);
+    BookResponseDTO createBook(
+            BookRequestDTO request
+    );
 
-    List<Book> getAllBooks();
+    List<BookResponseDTO> getAllBooks();
 
-    Book getBookById(Long id);
+    BookResponseDTO getBookById(
+            Long id
+    );
 
-    Book updateBook(Long id, Book updatedBook);
+    BookResponseDTO updateBook(
+            Long id,
+            BookRequestDTO request
+    );
 
-    void deleteBook(Long id);
+    void deleteBook(
+            Long id
+    );
 }
