@@ -1,0 +1,31 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: find-service
+
+autoconfigure:
+  exclude:
+    - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          book-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+            loggerLevel: basic
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+
+logging:
+  level:
+    com.library.find_service: INFO
+    com.library.find_service.client.BookClient: DEBUG
+jwt:
+  secret: "${JWT_SECRET:MyVeryLongSuperSecretJwtKeyForLibraryManagementSystem2026SecureTokenGeneration}"

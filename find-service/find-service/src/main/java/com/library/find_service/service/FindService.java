@@ -1,55 +1,22 @@
 package com.library.find_service.service;
 
-
-import com.library.find_service.client.BookClient;
 import com.library.find_service.dto.BookDTO;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service
-public class FindService {
+public interface FindService {
 
-    private final BookClient bookClient;
+    List<BookDTO> getAllBooks();
 
-    public FindService(BookClient bookClient) {
-        this.bookClient = bookClient;
-    }
+    List<BookDTO> findByTitle(
+            String title
+    );
 
-    public List<BookDTO> getAllBooks() {
-        return bookClient.getAllBooks();
-    }
+    List<BookDTO> findByAuthor(
+            String author
+    );
 
-    public List<BookDTO> findByTitle(String title) {
-
-        return bookClient.getAllBooks()
-                .stream()
-                .filter(book ->
-                        book.getTitle()
-                                .toLowerCase()
-                                .contains(title.toLowerCase()))
-                .toList();
-    }
-
-    public List<BookDTO> findByAuthor(String author) {
-
-        return bookClient.getAllBooks()
-                .stream()
-                .filter(book ->
-                        book.getAuthor()
-                                .toLowerCase()
-                                .contains(author.toLowerCase()))
-                .toList();
-    }
-
-    public List<BookDTO> findByCategory(String category) {
-
-        return bookClient.getAllBooks()
-                .stream()
-                .filter(book ->
-                        book.getCategory()
-                                .toLowerCase()
-                                .contains(category.toLowerCase()))
-                .toList();
-    }
+    List<BookDTO> findByCategory(
+            String category
+    );
 }
