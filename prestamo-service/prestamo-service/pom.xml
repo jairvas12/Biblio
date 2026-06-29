@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -22,7 +22,7 @@
     <name>prestamo-service</name>
 
     <description>
-        Microservicio encargado de gestionar préstamos y devoluciones
+        Microservicio encargado de gestionar prÃ©stamos y devoluciones
         de copias de libros.
     </description>
 
@@ -67,7 +67,7 @@
             </artifactId>
         </dependency>
 
-        <!-- Comunicación con otros microservicios mediante Feign -->
+        <!-- ComunicaciÃ³n con otros microservicios mediante Feign -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
@@ -79,7 +79,7 @@
             <artifactId>feign-okhttp</artifactId>
         </dependency>
 
-        <!-- Documentación Swagger/OpenAPI -->
+        <!-- DocumentaciÃ³n Swagger/OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>
@@ -115,7 +115,13 @@
             <scope>test</scope>
         </dependency>
 
-    </dependencies>
+    
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+</dependencies>
 
     <dependencyManagement>
         <dependencies>
@@ -134,7 +140,7 @@
     <build>
         <plugins>
 
-            <!-- Generación del JAR -->
+            <!-- GeneraciÃ³n del JAR -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -166,7 +172,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Reporte y validación de cobertura -->
+            <!-- Reporte y validaciÃ³n de cobertura -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -229,3 +235,4 @@
     </build>
 
 </project>
+
