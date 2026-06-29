@@ -47,6 +47,20 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, mensaje, request);
     }
 
+    @ExceptionHandler(RemoteServiceException.class)
+    public ResponseEntity<ErrorResponse> handleRemoteService(
+        RemoteServiceException ex,
+        WebRequest request) {
+
+    log.error("Error de comunicación con un servicio externo: {}", ex.getMessage());
+
+    return buildResponse(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            ex.getMessage(),
+            request
+    );
+}
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, WebRequest request) {
         log.error("Error interno inesperado", ex);
