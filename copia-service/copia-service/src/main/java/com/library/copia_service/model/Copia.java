@@ -1,3 +1,4 @@
+//maraco el jairo 
 package com.library.copia_service.model;
 
 import jakarta.persistence.*;
@@ -18,6 +19,7 @@ public class Copia {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /*atributo de codigo copia  */
     @Column(name = "codigo_copia", nullable = false, unique = true, length = 50)
     private String codigoCopia;
 
