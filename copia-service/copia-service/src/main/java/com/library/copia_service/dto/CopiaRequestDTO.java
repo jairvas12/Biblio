@@ -6,16 +6,27 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class CopiaRequestDTO {
 
     @NotBlank(message = "El código de copia es obligatorio")
     @Size(max = 50, message = "El código de copia no puede superar 50 caracteres")
-    @Pattern(regexp = "^COPY-[0-9]{3,}$", message = "El código debe tener formato COPY-001")
+    @Pattern(
+            regexp = "^COPY-[0-9]{3,}$",
+            message = "El código debe tener un formato como COPY-001"
+    )
     private String codigoCopia;
 
-    @NotNull(message = "El ID del libro es obligatorio")
-    @Positive(message = "El ID del libro debe ser positivo")
+    @NotNull(message = "El identificador del libro es obligatorio")
+    @Positive(message = "El identificador del libro debe ser mayor que cero")
     private Long bookId;
 
     private EstadoCopia estado;
@@ -26,55 +37,4 @@ public class CopiaRequestDTO {
 
     @Size(max = 255, message = "La observación no puede superar 255 caracteres")
     private String observacion;
-
-    public CopiaRequestDTO() {
-    }
-
-    public CopiaRequestDTO(String codigoCopia, Long bookId, EstadoCopia estado, String ubicacion, String observacion) {
-        this.codigoCopia = codigoCopia;
-        this.bookId = bookId;
-        this.estado = estado;
-        this.ubicacion = ubicacion;
-        this.observacion = observacion;
-    }
-
-    public String getCodigoCopia() {
-        return codigoCopia;
-    }
-
-    public void setCodigoCopia(String codigoCopia) {
-        this.codigoCopia = codigoCopia;
-    }
-
-    public Long getBookId() {
-        return bookId;
-    }
-
-    public void setBookId(Long bookId) {
-        this.bookId = bookId;
-    }
-
-    public EstadoCopia getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoCopia estado) {
-        this.estado = estado;
-    }
-
-    public String getUbicacion() {
-        return ubicacion;
-    }
-
-    public void setUbicacion(String ubicacion) {
-        this.ubicacion = ubicacion;
-    }
-
-    public String getObservacion() {
-        return observacion;
-    }
-
-    public void setObservacion(String observacion) {
-        this.observacion = observacion;
-    }
 }

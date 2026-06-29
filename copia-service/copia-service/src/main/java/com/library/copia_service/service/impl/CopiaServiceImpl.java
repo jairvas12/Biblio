@@ -5,7 +5,9 @@ import com.library.copia_service.dto.BookResponseDTO;
 import com.library.copia_service.dto.CopiaRequestDTO;
 import com.library.copia_service.dto.CopiaResponseDTO;
 import com.library.copia_service.exception.BusinessException;
+import com.library.copia_service.exception.RemoteServiceException;
 import com.library.copia_service.exception.ResourceNotFoundException;
+import com.library.copia_service.mapper.CopiaMapper;
 import com.library.copia_service.model.Copia;
 import com.library.copia_service.model.EstadoCopia;
 import com.library.copia_service.repository.CopiaRepository;
@@ -16,7 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -26,34 +30,38 @@ public class CopiaServiceImpl implements CopiaService {
 
     private final CopiaRepository copiaRepository;
     private final BookClient bookClient;
+    private final CopiaMapper copiaMapper;
 
     @Override
     public CopiaResponseDTO crearCopia(CopiaRequestDTO requestDTO) {
-        log.info("Iniciando creación de copia con código {}", requestDTO.getCodigoCopia());
+        validarSolicitud(requestDTO);
 
-        validarLibroExiste(requestDTO.getBookId());
+        log.info(
+                "Iniciando creación de copia con código {}",
+                requestDTO.getCodigoCopia()
+        );
+
+        validarEstadoInicial(requestDTO.getEstado());
+
+        BookResponseDTO libro = validarLibroExiste(requestDTO.getBookId());
 
         if (copiaRepository.existsByCodigoCopia(requestDTO.getCodigoCopia())) {
-            throw new BusinessException("Ya existe una copia con el código: " + requestDTO.getCodigoCopia());
+            throw new BusinessException(
+                    "Ya existe una copia con el código: "
+                            + requestDTO.getCodigoCopia()
+            );
         }
 
-        EstadoCopia estadoInicial = requestDTO.getEstado() != null
-                ? requestDTO.getEstado()
-                : EstadoCopia.AVAILABLE;
-
-        Copia copia = Copia.builder()
-                .codigoCopia(requestDTO.getCodigoCopia())
-                .bookId(requestDTO.getBookId())
-                .estado(estadoInicial)
-                .ubicacion(requestDTO.getUbicacion())
-                .observacion(requestDTO.getObservacion())
-                .build();
-
+        Copia copia = copiaMapper.toEntity(requestDTO);
         Copia copiaGuardada = copiaRepository.save(copia);
 
-        log.info("Copia creada correctamente con ID {}", copiaGuardada.getId());
+        log.info(
+                "Copia creada correctamente con ID {} y estado {}",
+                copiaGuardada.getId(),
+                copiaGuardada.getEstado()
+        );
 
-        return convertirAResponseDTO(copiaGuardada);
+        return copiaMapper.toResponseDTO(copiaGuardada, libro);
     }
 
     @Override
@@ -61,119 +69,203 @@ public class CopiaServiceImpl implements CopiaService {
     public List<CopiaResponseDTO> listarCopias() {
         log.info("Listando todas las copias");
 
-        return copiaRepository.findAll()
-                .stream()
-                .map(this::convertirAResponseDTO)
-                .toList();
+        return convertirListaAResponseDTO(copiaRepository.findAll());
     }
 
     @Override
     @Transactional(readOnly = true)
     public CopiaResponseDTO buscarCopiaPorId(Long id) {
+        validarIdentificador(id, "copia");
+
         log.info("Buscando copia por ID {}", id);
 
         Copia copia = obtenerCopiaPorId(id);
+        BookResponseDTO libro = obtenerLibroParaRespuesta(copia.getBookId());
 
-        return convertirAResponseDTO(copia);
+        return copiaMapper.toResponseDTO(copia, libro);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CopiaResponseDTO> listarCopiasPorLibro(Long bookId) {
+        validarIdentificador(bookId, "libro");
+
         log.info("Listando copias del libro con ID {}", bookId);
 
-        validarLibroExiste(bookId);
+        BookResponseDTO libro = validarLibroExiste(bookId);
 
         return copiaRepository.findByBookId(bookId)
                 .stream()
-                .map(this::convertirAResponseDTO)
+                .map(copia -> copiaMapper.toResponseDTO(copia, libro))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CopiaResponseDTO> listarCopiasDisponiblesPorLibro(Long bookId) {
-        log.info("Listando copias disponibles del libro con ID {}", bookId);
+        validarIdentificador(bookId, "libro");
 
-        validarLibroExiste(bookId);
+        log.info(
+                "Listando copias disponibles del libro con ID {}",
+                bookId
+        );
 
-        return copiaRepository.findByBookIdAndEstado(bookId, EstadoCopia.AVAILABLE)
+        BookResponseDTO libro = validarLibroExiste(bookId);
+
+        return copiaRepository
+                .findByBookIdAndEstado(bookId, EstadoCopia.AVAILABLE)
                 .stream()
-                .map(this::convertirAResponseDTO)
+                .map(copia -> copiaMapper.toResponseDTO(copia, libro))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CopiaResponseDTO> listarCopiasPorEstado(EstadoCopia estado) {
+        if (estado == null) {
+            throw new BusinessException(
+                    "El estado de la copia es obligatorio"
+            );
+        }
+
         log.info("Listando copias con estado {}", estado);
 
-        return copiaRepository.findByEstado(estado)
-                .stream()
-                .map(this::convertirAResponseDTO)
-                .toList();
+        return convertirListaAResponseDTO(
+                copiaRepository.findByEstado(estado)
+        );
     }
 
     @Override
-    public CopiaResponseDTO actualizarCopia(Long id, CopiaRequestDTO requestDTO) {
+    public CopiaResponseDTO actualizarCopia(
+            Long id,
+            CopiaRequestDTO requestDTO
+    ) {
+        validarIdentificador(id, "copia");
+        validarSolicitud(requestDTO);
+
         log.info("Actualizando copia con ID {}", id);
 
         Copia copia = obtenerCopiaPorId(id);
 
-        validarLibroExiste(requestDTO.getBookId());
+        validarEstadoEnActualizacion(
+                copia.getEstado(),
+                requestDTO.getEstado()
+        );
 
-        if (copiaRepository.existsByCodigoCopiaAndIdNot(requestDTO.getCodigoCopia(), id)) {
-            throw new BusinessException("Ya existe otra copia con el código: " + requestDTO.getCodigoCopia());
+        BookResponseDTO libro = validarLibroExiste(requestDTO.getBookId());
+
+        if (copiaRepository.existsByCodigoCopiaAndIdNot(
+                requestDTO.getCodigoCopia(),
+                id
+        )) {
+            throw new BusinessException(
+                    "Ya existe otra copia con el código: "
+                            + requestDTO.getCodigoCopia()
+            );
         }
 
-        copia.setCodigoCopia(requestDTO.getCodigoCopia());
-        copia.setBookId(requestDTO.getBookId());
-        copia.setUbicacion(requestDTO.getUbicacion());
-        copia.setObservacion(requestDTO.getObservacion());
-
-        if (requestDTO.getEstado() != null) {
-            copia.setEstado(requestDTO.getEstado());
-        }
+        copiaMapper.updateEntity(copia, requestDTO);
 
         Copia copiaActualizada = copiaRepository.save(copia);
 
-        log.info("Copia actualizada correctamente con ID {}", copiaActualizada.getId());
+        log.info(
+                "Copia actualizada correctamente con ID {}",
+                copiaActualizada.getId()
+        );
 
-        return convertirAResponseDTO(copiaActualizada);
+        return copiaMapper.toResponseDTO(copiaActualizada, libro);
     }
 
     @Override
-    public CopiaResponseDTO cambiarEstado(Long id, EstadoCopia estado) {
-        log.info("Cambiando estado de copia ID {} a {}", id, estado);
+    public CopiaResponseDTO cambiarEstado(
+            Long id,
+            EstadoCopia nuevoEstado
+    ) {
+        validarIdentificador(id, "copia");
+
+        if (nuevoEstado == null) {
+            throw new BusinessException(
+                    "El nuevo estado de la copia es obligatorio"
+            );
+        }
+
+        log.info(
+                "Cambiando estado de copia ID {} a {}",
+                id,
+                nuevoEstado
+        );
 
         Copia copia = obtenerCopiaPorId(id);
-        copia.setEstado(estado);
+        EstadoCopia estadoActual = copia.getEstado();
+
+        if (estadoActual == nuevoEstado) {
+            log.info(
+                    "La copia ID {} ya se encuentra en estado {}",
+                    id,
+                    nuevoEstado
+            );
+
+            return copiaMapper.toResponseDTO(
+                    copia,
+                    obtenerLibroParaRespuesta(copia.getBookId())
+            );
+        }
+
+        validarTransicionEstado(estadoActual, nuevoEstado);
+
+        copia.setEstado(nuevoEstado);
 
         Copia copiaActualizada = copiaRepository.save(copia);
 
-        log.info("Estado actualizado correctamente para copia ID {}", id);
+        log.info(
+                "Estado de copia ID {} actualizado de {} a {}",
+                id,
+                estadoActual,
+                nuevoEstado
+        );
 
-        return convertirAResponseDTO(copiaActualizada);
+        return copiaMapper.toResponseDTO(
+                copiaActualizada,
+                obtenerLibroParaRespuesta(copiaActualizada.getBookId())
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public Long contarCopiasDisponiblesPorLibro(Long bookId) {
-        log.info("Contando copias disponibles para libro ID {}", bookId);
+        validarIdentificador(bookId, "libro");
+
+        log.info(
+                "Contando copias disponibles para libro ID {}",
+                bookId
+        );
 
         validarLibroExiste(bookId);
 
-        return copiaRepository.countByBookIdAndEstado(bookId, EstadoCopia.AVAILABLE);
+        return copiaRepository.countByBookIdAndEstado(
+                bookId,
+                EstadoCopia.AVAILABLE
+        );
     }
 
     @Override
     public void eliminarCopia(Long id) {
+        validarIdentificador(id, "copia");
+
         log.info("Eliminando copia con ID {}", id);
 
         Copia copia = obtenerCopiaPorId(id);
 
         if (copia.getEstado() == EstadoCopia.LOANED) {
-            throw new BusinessException("No se puede eliminar una copia que está prestada");
+            throw new BusinessException(
+                    "No se puede eliminar una copia que está prestada"
+            );
+        }
+
+        if (copia.getEstado() == EstadoCopia.RESERVED) {
+            throw new BusinessException(
+                    "No se puede eliminar una copia que está reservada"
+            );
         }
 
         copiaRepository.delete(copia);
@@ -183,19 +275,61 @@ public class CopiaServiceImpl implements CopiaService {
 
     private Copia obtenerCopiaPorId(Long id) {
         return copiaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No existe copia con ID: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe una copia con ID: " + id
+                        )
+                );
     }
 
     private BookResponseDTO validarLibroExiste(Long bookId) {
+        validarIdentificador(bookId, "libro");
+
         try {
-            return bookClient.buscarLibroPorId(bookId);
-        } catch (FeignException ex) {
-            if (ex.status() == 404) {
-                throw new ResourceNotFoundException("No existe libro en book-service con ID: " + bookId);
+            BookResponseDTO libro = bookClient.buscarLibroPorId(bookId);
+
+            if (libro == null) {
+                throw new RemoteServiceException(
+                        "book-service devolvió una respuesta vacía "
+                                + "para el libro ID " + bookId
+                );
             }
 
-            log.error("Error al comunicarse con book-service. Status: {}", ex.status());
-            throw new BusinessException("No se pudo validar el libro en book-service");
+            return libro;
+        } catch (FeignException ex) {
+            if (ex.status() == 404) {
+                throw new ResourceNotFoundException(
+                        "No existe un libro en book-service con ID: "
+                                + bookId
+                );
+            }
+
+            log.error(
+                    "Error HTTP al comunicarse con book-service. "
+                            + "Libro ID: {}, status: {}",
+                    bookId,
+                    ex.status(),
+                    ex
+            );
+
+            throw new RemoteServiceException(
+                    "No fue posible comunicarse con book-service",
+                    ex
+            );
+        } catch (RemoteServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error(
+                    "Error inesperado al comunicarse con book-service "
+                            + "para el libro ID {}",
+                    bookId,
+                    ex
+            );
+
+            throw new RemoteServiceException(
+                    "No fue posible comunicarse con book-service",
+                    ex
+            );
         }
     }
 
@@ -203,24 +337,120 @@ public class CopiaServiceImpl implements CopiaService {
         try {
             return bookClient.buscarLibroPorId(bookId);
         } catch (Exception ex) {
-            log.warn("No se pudo obtener información del libro ID {} para la respuesta", bookId);
+            log.warn(
+                    "No fue posible obtener información del libro ID {} "
+                            + "para enriquecer la respuesta",
+                    bookId
+            );
+
             return null;
         }
     }
 
-    private CopiaResponseDTO convertirAResponseDTO(Copia copia) {
-        BookResponseDTO libro = obtenerLibroParaRespuesta(copia.getBookId());
+    private List<CopiaResponseDTO> convertirListaAResponseDTO(
+            List<Copia> copias
+    ) {
+        Map<Long, BookResponseDTO> librosPorId = new HashMap<>();
 
-        return CopiaResponseDTO.builder()
-                .id(copia.getId())
-                .codigoCopia(copia.getCodigoCopia())
-                .bookId(copia.getBookId())
-                .bookTitle(libro != null ? libro.getTitle() : null)
-                .bookAuthor(libro != null ? libro.getAuthor() : null)
-                .estado(copia.getEstado())
-                .ubicacion(copia.getUbicacion())
-                .observacion(copia.getObservacion())
-                .fechaRegistro(copia.getFechaRegistro())
-                .build();
+        return copias.stream()
+                .map(copia -> {
+                    Long bookId = copia.getBookId();
+
+                    if (!librosPorId.containsKey(bookId)) {
+                        librosPorId.put(
+                                bookId,
+                                obtenerLibroParaRespuesta(bookId)
+                        );
+                    }
+
+                    return copiaMapper.toResponseDTO(
+                            copia,
+                            librosPorId.get(bookId)
+                    );
+                })
+                .toList();
+    }
+
+    private void validarSolicitud(CopiaRequestDTO requestDTO) {
+        if (requestDTO == null) {
+            throw new BusinessException(
+                    "La solicitud de copia no puede ser nula"
+            );
+        }
+    }
+
+    private void validarIdentificador(Long id, String nombre) {
+        if (id == null || id <= 0) {
+            throw new BusinessException(
+                    "El identificador de " + nombre
+                            + " debe ser mayor que cero"
+            );
+        }
+    }
+
+    private void validarEstadoInicial(EstadoCopia estadoSolicitado) {
+        if (estadoSolicitado != null
+                && estadoSolicitado != EstadoCopia.AVAILABLE) {
+            throw new BusinessException(
+                    "Toda copia nueva debe comenzar en estado AVAILABLE"
+            );
+        }
+    }
+
+    private void validarEstadoEnActualizacion(
+            EstadoCopia estadoActual,
+            EstadoCopia estadoSolicitado
+    ) {
+        if (estadoSolicitado != null
+                && estadoSolicitado != estadoActual) {
+            throw new BusinessException(
+                    "El estado de una copia debe modificarse mediante "
+                            + "el endpoint PATCH /copias/{id}/estado"
+            );
+        }
+    }
+
+    private void validarTransicionEstado(
+            EstadoCopia estadoActual,
+            EstadoCopia nuevoEstado
+    ) {
+        if (estadoActual == null) {
+            throw new BusinessException(
+                    "La copia no posee un estado actual válido"
+            );
+        }
+
+        boolean transicionPermitida = switch (estadoActual) {
+            case AVAILABLE ->
+                    nuevoEstado == EstadoCopia.RESERVED
+                            || nuevoEstado == EstadoCopia.LOANED
+                            || nuevoEstado == EstadoCopia.DAMAGED
+                            || nuevoEstado == EstadoCopia.LOST;
+
+            case RESERVED ->
+                    nuevoEstado == EstadoCopia.AVAILABLE
+                            || nuevoEstado == EstadoCopia.LOANED
+                            || nuevoEstado == EstadoCopia.DAMAGED
+                            || nuevoEstado == EstadoCopia.LOST;
+
+            case LOANED ->
+                    nuevoEstado == EstadoCopia.AVAILABLE
+                            || nuevoEstado == EstadoCopia.DAMAGED
+                            || nuevoEstado == EstadoCopia.LOST;
+
+            case DAMAGED ->
+                    nuevoEstado == EstadoCopia.AVAILABLE
+                            || nuevoEstado == EstadoCopia.LOST;
+
+            case LOST ->
+                    nuevoEstado == EstadoCopia.AVAILABLE;
+        };
+
+        if (!transicionPermitida) {
+            throw new BusinessException(
+                    "No se permite cambiar una copia de "
+                            + estadoActual + " a " + nuevoEstado
+            );
+        }
     }
 }
